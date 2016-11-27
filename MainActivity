@@ -1,0 +1,90 @@
+package com.tuncerergin.arduino;
+
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.TransitionDrawable;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.Set;
+
+public class MainActivity extends AppCompatActivity {
+    private ListView aygitListesi;
+    private BluetoothAdapter bluetoothAdapter = null;
+    public static final String EXTRA_ADDRESS = "device_address";
+    private ImageView buttonCihazAra;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        buttonCihazAra = (ImageView) findViewById(R.id.refresh);
+        aygitListesi = (ListView) findViewById(R.id.listView);
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter == null) {//telefonda bluetooth yok ise
+            Toast.makeText(getApplicationContext(), "Cihazınız Bluetooth desteklemiyor.", Toast.LENGTH_SHORT).show();
+            finish();//uygulamayı bitir
+        } else if (!bluetoothAdapter.isEnabled()) {//Kullanıcıya bluetooth u açmasını iste
+            Intent BluetoothAc = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(BluetoothAc, 1);
+        }
+        buttonCihazAra.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                buttonAnimasyon();
+                cihazAra();
+            }
+        });
+        cihazAra();
+    }
+
+    private void buttonAnimasyon() {//Butona tıklanınca tıklanma animasyonu oluşturmak için
+        Drawable backgrounds[] = new Drawable[2];
+        backgrounds[0] = getDrawable(R.drawable.refresh);
+        backgrounds[1] = getDrawable(R.drawable.refreshclick);
+        TransitionDrawable crosser = new TransitionDrawable(backgrounds);
+        buttonCihazAra.setImageDrawable(crosser);
+        crosser.startTransition(0);
+        crosser.reverseTransition(1000);
+    /*
+    * iki ayrı resim dosyasını Drawable türünden bi diziye atanıyor
+    * diziye atanan iki resim arasında geçiş oluturuluyor
+    * butona oluşturulan geçiş ekleniyor ve startTransition ile uygulamaya tıklanınca 1. resimden 2. resime geçiş oluyor
+    * reverseTransition ile 2. resimden 1. resime geri gönüş yapılıyor
+    */
+    }
+
+    private void cihazAra() {
+        Set<BluetoothDevice> aygitlar = bluetoothAdapter.getBondedDevices();
+        ArrayList<String> list = new ArrayList<>();
+        if (aygitlar.size() > 0) {
+            for (BluetoothDevice bluetoothAygiti : aygitlar) {//Telefon ile eşleştirilmiş olan bütün cihazlar listeye eklendi
+                list.add(bluetoothAygiti.getName() + "\n" + bluetoothAygiti.getAddress());
+            }
+        } else {
+            Toast.makeText(getApplicationContext(), "Bluetooth aygıtı bulunamadı.", Toast.LENGTH_SHORT).show();
+        }
+        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, list);
+        aygitListesi.setAdapter(adapter);
+        aygitListesi.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String info = ((TextView) view).getText().toString();
+                String address = info.substring(info.length() - 17);//Seçilen aygıtın MAC adresi alındı
+                Intent ıntent = new Intent(getApplicationContext(), Control.class);
+                ıntent.putExtra(EXTRA_ADDRESS, address);
+                startActivity(ıntent);//MAC adreesi Controll clasına gönderildi ve class başlatıldı
+            }
+        });
+    }
+}
